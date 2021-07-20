@@ -34,7 +34,6 @@ public class Scanner {
         keywords.put("while",   WHILE);
     }
 
-
     Scanner(String source) {
         this.source = source;
     }
@@ -53,16 +52,40 @@ public class Scanner {
     private void scanToken() {
         char c = advance();
         switch (c) {
-            case '(': addToken(LEFT_PAREN); break;
-            case ')': addToken(RIGHT_PAREN); break;
-            case '{': addToken(LEFT_BRACE); break;
-            case '}': addToken(RIGHT_BRACE); break;
-            case ',': addToken(COMMA); break;
-            case '.': addToken(DOT); break;
-            case '-': addToken(MINUS); break;
-            case '+': addToken(PLUS); break;
-            case ';': addToken(SEMICOLON); break;
-            case '*': addToken(STAR); break;
+            case '(':
+                addToken(LEFT_PAREN);
+                break;
+            case ')':
+                addToken(RIGHT_PAREN);
+                break;
+            case '{':
+                addToken(LEFT_BRACE);
+                break;
+            case '}':
+                addToken(RIGHT_BRACE);
+                break;
+            case ',':
+                addToken(COMMA);
+                break;
+            case '.':
+                // Allowing someone to type decimals as .4213 in addition to explicitly 0.4213.
+                if (isDigit(peek())) {
+                    number();
+                }
+                else addToken(DOT);
+                break;
+            case '-':
+                addToken(MINUS);
+                break;
+            case '+':
+                addToken(PLUS);
+                break;
+            case ';':
+                addToken(SEMICOLON);
+                break;
+            case '*':
+                addToken(STAR);
+                break;
             case '!':
                 addToken(match('=') ? BANG_EQUAL : BANG);
                 break;
@@ -78,6 +101,10 @@ public class Scanner {
                 if (match('/')) {
                     // A comment goes until the end of a line.
                     while (peek() != '\n' && !isAtEnd()) advance();
+                } else if (match('*')) {
+                    // Added by Izabella, implementation to support multi-line comments.
+                    if (peek() == '*') nestComment();
+                    else multiComment();
                 } else {
                     addToken(SLASH);
                 }
@@ -126,8 +153,48 @@ public class Scanner {
         addToken(NUMBER, Double.parseDouble(source.substring(start, current)));
     }
 
+    // Implementation of nested multi-line comments. Outermost comment structure of the 'nest'
+    // contains extra asterisks: /** and **/
+    private void nestComment() {
+        while (!(peek() == '*' && peekNext() == '*' && peekNextNext() == '/') && !isAtEnd()) {
+            if (peek() == '\n') line++;
+            advance();
+        }
+
+        if (isAtEnd()) {
+            Language.error(line, "Unclosed nested comment.");
+            return;
+        }
+
+        advance();
+        advance();
+        advance();
+    }
+
+    // Implementation of multi-line comments.
+    private void multiComment() {
+        while (!(peek() == '*' && peekNext() == '/') && !isAtEnd()) {
+            if (peek() == '\n') line++;
+            advance();
+        }
+
+        if (isAtEnd()) {
+            Language.error(line, "Unclosed multi-line comment.");
+            return;
+        }
+
+        // 'Consumes' the closing */
+        advance();
+        advance();
+    }
+
     private void string() {
         while (peek() != '"' && !isAtEnd()) {
+            // Checking to make sure quote isn't an escape character.
+            if (peekNext() == '\\' && peekNextNext() == '"') {
+                advance();
+                advance();
+            }
             if (peek() == '\n') line++;
             advance();
         }
@@ -140,8 +207,13 @@ public class Scanner {
         // The closing ".
         advance();
 
-        // Trim the surrounding quotes.
-        String value = source.substring(start + 1, current - 1);
+        // Trim the surrounding quotes and unescape any escape characters.
+        String value = source.substring(start + 1, current - 1).replace("\\\\", "\\").
+                replace("\\n", "\n").replace("\\f", "\f").
+                replace("\\r", "\r").replace("\\t", "\t").
+                replace("\\b", "\b").replace("\\'", "'").
+                replace("\\\"", "\"");
+
         addToken(STRING, value);
     }
 
@@ -161,6 +233,12 @@ public class Scanner {
     private char peekNext() {
         if (current + 1 >= source.length()) return '\0';
         return source.charAt(current + 1);
+    }
+
+    // Used only for nested comments.
+    private char peekNextNext() {
+        if (current + 2 >= source.length()) return '\0';
+        return source.charAt(current + 2);
     }
 
     private boolean isAlpha(char c) {
@@ -193,6 +271,5 @@ public class Scanner {
         String text = source.substring(start, current);
         tokens.add(new Token(type, text, literal, line));
     }
-
 
 }
