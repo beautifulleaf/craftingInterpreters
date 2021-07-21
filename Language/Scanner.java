@@ -13,6 +13,8 @@ public class Scanner {
     private int start = 0;
     private int current = 0;
     private int line = 1;
+    // Keeping track of the count of the beginning of each line so that column can be counted for error report.
+    private int startLine = 0;
     private static final Map<String, TokenType> keywords;
     static {
         keywords = new HashMap<>();
@@ -116,6 +118,7 @@ public class Scanner {
                 break;
             case '\n':
                 line++;
+                startLine = current + 1;
                 break;
             case '"': string(); break;
 
@@ -125,10 +128,19 @@ public class Scanner {
                 } else if (isAlpha(c)) {
                     identifier();
                 } else {
-                    Language.error(line, "Unexpected character.");
+                    int newIndex = restOfLine(current);
+                    Language.error(line, (current - startLine), source.substring(startLine - 1, newIndex), "Unexpected character.");
                 }
                 break;
         }
+    }
+
+    // For unrecognized character errors. There is probably a more elegant way to do this but I want to
+    // display the entire line an unrecognized character is on, not just the character and what precedes it.
+    private int restOfLine(int current) {
+        int index = current;
+        while (source.charAt(index) != '\n') index++;
+        return index;
     }
 
     private void identifier() {
@@ -157,12 +169,12 @@ public class Scanner {
     // contains extra asterisks: /** and **/
     private void nestComment() {
         while (!(peek() == '*' && peekNext() == '*' && peekNextNext() == '/') && !isAtEnd()) {
-            if (peek() == '\n') line++;
+            if (peek() == '\n') { line++; startLine = current + 1;}
             advance();
         }
 
         if (isAtEnd()) {
-            Language.error(line, "Unclosed nested comment.");
+            Language.error(line, (current - startLine), source.substring(startLine, current), "Unclosed nested comment.");
             return;
         }
 
@@ -174,16 +186,16 @@ public class Scanner {
     // Implementation of multi-line comments.
     private void multiComment() {
         while (!(peek() == '*' && peekNext() == '/') && !isAtEnd()) {
-            if (peek() == '\n') line++;
+            if (peek() == '\n') { line++; startLine = current + 1;}
             advance();
         }
 
         if (isAtEnd()) {
-            Language.error(line, "Unclosed multi-line comment.");
+            Language.error(line, (current - startLine), source.substring(startLine, current), "Unclosed multi-line comment.");
             return;
         }
 
-        // 'Consumes' the closing */
+        // 'Consumes' the closing /*
         advance();
         advance();
     }
@@ -195,12 +207,12 @@ public class Scanner {
                 advance();
                 advance();
             }
-            if (peek() == '\n') line++;
+            if (peek() == '\n') { line++; startLine = current + 1;}
             advance();
         }
 
         if (isAtEnd()) {
-            Language.error(line, "Unterminated string.");
+            Language.error(line, (current - startLine), source.substring(startLine, current), "Unterminated string.");
             return;
         }
 
@@ -271,5 +283,4 @@ public class Scanner {
         String text = source.substring(start, current);
         tokens.add(new Token(type, text, literal, line));
     }
-
 }
