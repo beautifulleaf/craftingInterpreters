@@ -51,12 +51,17 @@ public class Language {
         }
     }
 
-    static void error(int line, String message) {
-        report(line, "", message);
+    static void error(int line, int column, String where, String message) {
+        report(line, column, where, message);
     }
 
-    private static void report(int line, String where, String message) {
-        System.err.println("[line " + line + "] Error" + where + ": " + message);
+    private static void report(int line, int column, String where, String message) {
+        System.err.println("Error: " + message + "\n" + "Line " + line + "| " + where);
+        // The preceding text "Line x| " is 8 spaces, so count must start from there rather than the beginning.
+        for (int i = 0; i < column + 8; i++) {
+            System.err.print(" ");
+        }
+        System.err.print("^" + "\n");
         hadError = true;
     }
 }
