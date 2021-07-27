@@ -69,6 +69,12 @@ public class Scanner {
             case ',':
                 addToken(COMMA);
                 break;
+            case '?':
+                addToken(QUESTION);
+                break;
+            case ':':
+                addToken(COLON);
+                break;
             case '.':
                 // Allowing someone to type decimals as .4213 in addition to explicitly 0.4213.
                 if (isDigit(peek())) {
@@ -96,6 +102,7 @@ public class Scanner {
                 break;
             case '<':
                 addToken(match('=') ? LESS_EQUAL : LESS);
+                break;
             case '>':
                 addToken(match('=') ? GREATER_EQUAL : GREATER);
                 break;
@@ -284,3 +291,6 @@ public class Scanner {
         tokens.add(new Token(type, text, literal, line));
     }
 }
+
+
+
