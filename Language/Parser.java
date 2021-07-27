@@ -22,10 +22,49 @@ public class Parser {
     }
 
     private Expr expression() {
-        return equality();
+        return comma();
+    }
+
+    // Implementing C-style comma operator.
+    private Expr comma() {
+        if (match(COMMA)) {
+            System.err.println("Error: Comma operator needs to have operand preceding it.\n" + "Line " +
+                    previous().line + "| at '" + previous().lexeme + "'");
+        }
+        Expr expr = ternary();
+
+        while (match(COMMA)) {
+            Token operator = previous();
+            Expr right = ternary();
+            expr = new Expr.Binary(expr, operator, right);
+        }
+        return expr;
+    }
+
+    // Implementing the ternary operator.
+    private Expr ternary() {
+        if (match(QUESTION)) {
+            System.err.println("Error: Ternary operator needs to have condition preceding ?.\n" + "Line " +
+                    previous().line + "| at '" + previous().lexeme + "'");
+        }
+        Expr expr = equality();
+
+        while (match(QUESTION)) {
+            Expr result = equality();
+            while (match(COLON)) {
+                Expr altResult = equality();
+                expr = new Expr.Ternary(expr, result, altResult);
+            }
+        }
+
+        return expr;
     }
 
     private Expr equality() {
+        if (match(BANG_EQUAL, EQUAL_EQUAL)) {
+            System.err.println("Error: Operator needs to have operand preceding it.\n" + "Line " +
+                    previous().line + "| at '" + previous().lexeme + "'");
+        }
         Expr expr = comparison();
 
         while (match(BANG_EQUAL, EQUAL_EQUAL)) {
@@ -104,6 +143,10 @@ public class Parser {
     }
 
     private Expr comparison() {
+        if (match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL)) {
+            System.err.println("Error: Operator needs to have operand preceding it.\n" + "Line " +
+                    previous().line + "| at '" + previous().lexeme + "'");
+        }
         Expr expr = term();
 
         while (match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL)) {
@@ -116,6 +159,10 @@ public class Parser {
     }
 
     private Expr term() {
+        if (match(MINUS, PLUS)) {
+            System.err.println("Error: Operator needs to have operand preceding it.\n" + "Line " +
+                    previous().line + "| at '" + previous().lexeme + "'");
+        }
         Expr expr = factor();
 
         while (match(MINUS, PLUS)) {
@@ -128,6 +175,10 @@ public class Parser {
     }
 
     private Expr factor() {
+        if (match(SLASH, STAR)) {
+            System.err.println("Error: Operator needs to have operand preceding it.\n" + "Line " +
+                    previous().line + "| at '" + previous().lexeme + "'");
+        }
         Expr expr = unary();
 
         while (match(SLASH, STAR)) {
