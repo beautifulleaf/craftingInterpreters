@@ -16,6 +16,15 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         }
     }
 
+    void interpretEx(Expr expression) {
+        try {
+            Object value = evaluate(expression);
+            System.out.println(stringify(value));
+        } catch (RuntimeError error) {
+            Language.runtimeError(error);
+        }
+    }
+
     private void execute(Stmt stmt) {
         stmt.accept(this);
     }
