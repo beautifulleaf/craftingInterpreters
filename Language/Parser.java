@@ -9,6 +9,7 @@ public class Parser {
     private static class ParseError extends RuntimeException {}
     private final List<Token> tokens;
     private int current = 0;
+    private static final Interpreter exInterpreter = new Interpreter();
 
     Parser(List<Token> tokens) {
         this.tokens = tokens;
@@ -64,7 +65,8 @@ public class Parser {
 
     private Stmt expressionStatement() {
         Expr expr = expression();
-        consume(SEMICOLON, "Expect ';' after value.");
+        if (check(SEMICOLON)) advance();
+        else exInterpreter.interpretEx(expr);
         return new Stmt.Expression(expr);
     }
 
@@ -162,6 +164,14 @@ public class Parser {
         if (check(type)) return advance();
 
         throw error(peek(), message);
+    }
+
+    private Token exConsume(Expr expr) {
+        if (check(SEMICOLON)) return advance();
+        else {
+            exInterpreter.interpretEx(expr);
+            return null;
+        }
     }
 
     private boolean check(TokenType type) {
