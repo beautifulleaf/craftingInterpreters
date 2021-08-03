@@ -17,6 +17,8 @@ class Environment {
 
     Object get(Token name) {
         if (values.containsKey(name.lexeme)) {
+            if (values.get(name.lexeme) == null) throw new RuntimeError(name,
+                    "Variable was not assigned a value.");
             return values.get(name.lexeme);
         }
 
