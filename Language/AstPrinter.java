@@ -31,11 +31,17 @@ class AstPrinter implements Expr.Visitor<String>{
         return parenthesize("?:", expr.condition, expr.result, expr.altResult);
     }
 
+    @Override
     public String visitVariableExpr(Expr.Variable expr) {
         return expr.name.toString();
     }
 
+    @Override
     public String visitAssignExpr(Expr.Assign expr) { return expr.name.toString() + ", " + expr.value.toString(); }
+
+    @Override
+    public String visitLogicalExpr(Expr.Logical expr) { return expr.left.toString() + ", " + expr.operator.toString() + ", "
+    + expr.right.toString(); }
 
     private String parenthesize(String name, Expr... exprs) {
         StringBuilder builder = new StringBuilder();
