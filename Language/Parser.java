@@ -39,14 +39,25 @@ public class Parser {
             return null;
         }
     }
-
     private Stmt statement() {
+        if (match(BREAK)) return breakStatement();
         if (match(FOR)) return forStatement();
         if (match(IF)) return ifStatement();
         if (match(PRINT)) return printStatement();
         if (match(WHILE)) return whileStatement();
         if (match(LEFT_BRACE)) return new Stmt.Block(block());
         return expressionStatement();
+    }
+
+    private Stmt breakStatement() {
+        consume(SEMICOLON, "Expect ';' after 'break'");
+        int index = current;
+        while (index >= 0) {
+            if (tokens.get(index).type == WHILE || tokens.get(index).type == FOR) break;
+            index--;
+        }
+        if (index == -1) throw error(tokens.get(current), "Break statement has no enclosing loop.");
+        return new Stmt.Break();
     }
 
     private Stmt forStatement() {
@@ -256,14 +267,6 @@ public class Parser {
         throw error(peek(), message);
     }
 
-    private Token exConsume(Expr expr) {
-        if (check(SEMICOLON)) return advance();
-        else {
-            exInterpreter.interpretEx(expr);
-            return null;
-        }
-    }
-
     private boolean check(TokenType type) {
         if (isAtEnd()) return false;
         return peek().type == type;
@@ -284,6 +287,34 @@ public class Parser {
 
     private Token previous() {
         return tokens.get(current - 1);
+    }
+
+    // Verify that there is an enclosing loop to begin with, then find the statement after that loop ends
+    private Stmt hasLoop() {
+        boolean hasLoop = false;
+        int index = current;
+        int rightCounter = 0;
+        int leftCounter = 0;
+        while (index >= 0) {
+            if (tokens.get(index).type == WHILE || tokens.get(index).type == FOR) {
+                hasLoop = true;
+                break;
+            }
+            index--;
+        }
+        if (!hasLoop) throw error(tokens.get(current), "This is not enclosed in a loop.");
+        while (!isAtEnd()) {
+            if (check(LEFT_BRACE)) leftCounter++;
+            if (check(RIGHT_BRACE)) {
+                rightCounter++;
+                if (rightCounter == leftCounter) break;
+            }
+            index++;
+        }
+        while (current != index + 1) {
+            advance();
+        }
+        return statement();
     }
 
     private ParseError error(Token token, String message) {
