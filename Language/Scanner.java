@@ -19,6 +19,7 @@ public class Scanner {
     static {
         keywords = new HashMap<>();
         keywords.put("and",     AND);
+        keywords.put("break",   BREAK);
         keywords.put("class",   CLASS);
         keywords.put("else",    ELSE);
         keywords.put("false",   FALSE);
@@ -291,6 +292,3 @@ public class Scanner {
         tokens.add(new Token(type, text, literal, line));
     }
 }
-
-
-
