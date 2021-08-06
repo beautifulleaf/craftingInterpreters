@@ -43,6 +43,10 @@ class AstPrinter implements Expr.Visitor<String>{
     public String visitLogicalExpr(Expr.Logical expr) { return expr.left.toString() + ", " + expr.operator.toString() + ", "
     + expr.right.toString(); }
 
+    @Override
+    public String visitCallExpr(Expr.Call expr) {return expr.callee.toString() + ", " + expr.paren.toString() +
+            ", " + expr.arguments.toString(); }
+
     private String parenthesize(String name, Expr... exprs) {
         StringBuilder builder = new StringBuilder();
 
