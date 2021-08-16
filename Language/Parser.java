@@ -34,6 +34,7 @@ public class Parser {
 
     private Stmt declaration() {
         try {
+            if (match(CLASS)) return classDeclaration();
             if (match(FUN)) return function("function");
             if (match(VAR)) return varDeclaration();
             return statement();
@@ -42,6 +43,21 @@ public class Parser {
             return null;
         }
     }
+
+    private Stmt classDeclaration() {
+        Token name = consume(IDENTIFIER, "Expect class name.");
+        consume(LEFT_BRACE, "Expect '{' before class body.");
+
+        List<Stmt.Function> methods = new ArrayList<>();
+        while (!check(RIGHT_BRACE) && !isAtEnd()) {
+            methods.add(function("method"));
+        }
+
+        consume(RIGHT_BRACE, "Expect '}' after class body.");
+
+        return new Stmt.Class(name, methods);
+    }
+
     private Stmt statement() {
         if (match(BREAK)) return breakStatement();
         if (match(FOR)) return forStatement();
@@ -54,6 +70,7 @@ public class Parser {
     }
 
     private Stmt breakStatement() {
+        Token keyword = previous();
         consume(SEMICOLON, "Expect ';' after 'break'");
         int index = current;
         while (index >= 0) {
@@ -61,7 +78,7 @@ public class Parser {
             index--;
         }
         if (index == -1) throw error(tokens.get(current), "Break statement has no enclosing loop.");
-        return new Stmt.Break();
+        return new Stmt.Break(keyword);
     }
 
     private Stmt forStatement() {
@@ -171,12 +188,10 @@ public class Parser {
                 if (parameters.size() >= 255) {
                     error(peek(), "Can't have more than 255 parameters.");
                 }
-
                 parameters.add(consume(IDENTIFIER, "Expect parameter name."));
             } while (match(COMMA));
         }
         consume(RIGHT_PAREN, "Expect ')' after parameters.");
-
         consume(LEFT_BRACE, "Expect '{' before " + kind + " body.");
         List<Stmt> body = block();
         return new Stmt.Function(name, parameters, body);
@@ -187,7 +202,6 @@ public class Parser {
         while (!check(RIGHT_BRACE) && !isAtEnd()) {
             statements.add(declaration());
         }
-
         consume(RIGHT_BRACE, "Expect '}' after block.");
 
         return statements;
@@ -203,13 +217,37 @@ public class Parser {
             if (expr instanceof Expr.Variable) {
                 Token name = ((Expr.Variable)expr).name;
                 return new Expr.Assign(name, value);
+            } else if (expr instanceof Expr.Get) {
+                Expr.Get get = (Expr.Get)expr;
+                return new Expr.Set(get.object, get.name, value);
             }
 
             error(equals, "Invalid assignment target.");
         }
         return expr;
     }
+/*
+    private Expr lambda() {
+        if (match(FUN)) {
+            consume(LEFT_PAREN, "Expect '(' after 'fun'.");
+            List<Token> parameters = new ArrayList<>();
+            if (!check(RIGHT_PAREN)) {
+                do {
+                    if (parameters.size() >= 255) {
+                        error(peek(), "Can't have more than 255 parameters.");
+                    }
 
+                    parameters.add(consume(IDENTIFIER, "Expect parameter name."));
+                } while (match(COMMA));
+            }
+            consume(RIGHT_PAREN, "Expect ')' after parameters.");
+            consume(LEFT_BRACE, "Expect '{' before body.");
+            List<Stmt> body = block();
+            return new Expr.Lambda(parameters, body);
+        }
+        return or();
+    }
+*/
     private Expr or() {
         Expr expr = and();
 
@@ -328,34 +366,6 @@ public class Parser {
         return tokens.get(current - 1);
     }
 
-    // Verify that there is an enclosing loop to begin with, then find the statement after that loop ends
-    private Stmt hasLoop() {
-        boolean hasLoop = false;
-        int index = current;
-        int rightCounter = 0;
-        int leftCounter = 0;
-        while (index >= 0) {
-            if (tokens.get(index).type == WHILE || tokens.get(index).type == FOR) {
-                hasLoop = true;
-                break;
-            }
-            index--;
-        }
-        if (!hasLoop) throw error(tokens.get(current), "This is not enclosed in a loop.");
-        while (!isAtEnd()) {
-            if (check(LEFT_BRACE)) leftCounter++;
-            if (check(RIGHT_BRACE)) {
-                rightCounter++;
-                if (rightCounter == leftCounter) break;
-            }
-            index++;
-        }
-        while (current != index + 1) {
-            advance();
-        }
-        return statement();
-    }
-
     private ParseError error(Token token, String message) {
         Language.error(token, message);
         return new ParseError();
@@ -465,6 +475,9 @@ public class Parser {
         while (true) {
             if (match(LEFT_PAREN)) {
                 expr = finishCall(expr);
+            } else if (match(DOT)) {
+                Token name = consume(IDENTIFIER, "Expect property name after '.'.");
+                expr = new Expr.Get(expr, name);
             } else {
                 break;
             }
@@ -480,6 +493,8 @@ public class Parser {
         if (match(NUMBER, STRING)) {
             return new Expr.Literal(previous().literal);
         }
+
+        if (match(THIS)) return new Expr.This(previous());
 
         if (match(IDENTIFIER)) {
             return new Expr.Variable(previous());
