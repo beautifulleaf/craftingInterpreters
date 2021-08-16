@@ -5,10 +5,18 @@ import java.util.List;
 class LanguageFunction implements LanguageCallable {
     private final Stmt.Function declaration;
     private final Environment closure;
+    private final boolean isInitializer;
 
-    LanguageFunction(Stmt.Function declaration, Environment closure) {
+    LanguageFunction(Stmt.Function declaration, Environment closure, boolean isInitializer) {
+        this.isInitializer = isInitializer;
         this.closure = closure;
         this.declaration = declaration;
+    }
+
+    LanguageFunction bind(LanguageInstance instance) {
+        Environment environment = new Environment(closure);
+        environment.define("this", instance);
+        return new LanguageFunction(declaration, environment, isInitializer);
     }
 
     @Override
@@ -31,8 +39,13 @@ class LanguageFunction implements LanguageCallable {
         try {
             interpreter.executeBlock(declaration.body, environment);
         } catch (Return returnValue) {
+            Token dummyToken = new Token(TokenType.THIS, "this", "", 0);
+            if (isInitializer) return closure.get(dummyToken);
             return returnValue.value;
         }
+
+        Token dummyToken = new Token(TokenType.THIS, "this", "", 0);
+        if (isInitializer) return closure.get(dummyToken);
         return null;
     }
 }
