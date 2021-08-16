@@ -47,6 +47,22 @@ class AstPrinter implements Expr.Visitor<String>{
     public String visitCallExpr(Expr.Call expr) {return expr.callee.toString() + ", " + expr.paren.toString() +
             ", " + expr.arguments.toString(); }
 
+    @Override
+    public String visitGetExpr(Expr.Get expr) {
+        return expr.type;
+    }
+
+    @Override
+    public String visitSetExpr(Expr.Set expr) {
+        return expr.type;
+    }
+
+    @Override
+    public String visitThisExpr(Expr.This expr) {return expr.type;}
+    /*
+    @Override
+    public String visitLambdaExpr(Expr.Lambda expr) {return expr.parameters.toString() + ", " + expr.body.toString();}
+    */
     private String parenthesize(String name, Expr... exprs) {
         StringBuilder builder = new StringBuilder();
 
