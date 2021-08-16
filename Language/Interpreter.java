@@ -9,7 +9,7 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
     final Environment globals = new Environment();
     private Environment environment = globals;
-    private final Map<Expr, Integer> locals = new HashMap<>();
+    private static final Map<Expr, Integer[]> locals = new HashMap<>();
     private static boolean isBreak = false;
 
     Interpreter() {
@@ -51,8 +51,9 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         stmt.accept(this);
     }
 
-    void resolve(Expr expr, int depth) {
-        locals.put(expr, depth);
+    void resolve(Expr expr, int depth, int index) {
+        Integer[] locations = {depth, index};
+        locals.put(expr, locations);
     }
 
     void executeBlock(List<Stmt> statements, Environment environment) {
@@ -114,9 +115,9 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     }
 
     private Object lookUpVariable(Token name, Expr expr) {
-        Integer distance = locals.get(expr);
-        if (distance != null) {
-            return environment.getAt(distance, name.lexeme);
+        Integer[] locationValues = locals.get(expr);
+        if (locationValues != null) {
+            return environment.getAt(locationValues[0], locationValues[1]);
         } else {
             return globals.get(name);
         }
@@ -211,7 +212,6 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         if (stmt.initializer != null) {
             value = evaluate(stmt.initializer);
         }
-
         environment.define(stmt.name.lexeme, value);
         return null;
     }
@@ -233,9 +233,9 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     @Override
     public Object visitAssignExpr(Expr.Assign expr) {
         Object value = evaluate(expr.value);
-        Integer distance = locals.get(expr);
-        if (distance != null) {
-            environment.assignAt(distance, expr.name, value);
+        Integer[] locationValues = locals.get(expr);
+        if (locationValues != null) {
+            environment.assignAt(locationValues[0], locationValues[1], expr.name, value);
         } else {
             globals.assign(expr.name, value);
         }
