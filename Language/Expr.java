@@ -13,12 +13,27 @@ abstract class Expr {
         R visitAssignExpr(Assign expr);
         R visitLogicalExpr(Logical expr);
         R visitCallExpr(Call expr);
+       // R visitLambdaExpr(Lambda expr);
     }
+
+    String type;
+    Integer index = -1;
+    Integer distance = -1;
+
+    void setDistance(int distance) {
+        this.distance = distance;
+    }
+
+    void setIndex(int index) {
+        this.index = index;
+    }
+
     static class Binary extends Expr {
         Binary(Expr left, Token operator, Expr right) {
             this.left = left;
             this.operator = operator;
             this.right = right;
+            type = "binary";
         }
 
         @Override
@@ -32,7 +47,7 @@ abstract class Expr {
     }
     static class Grouping extends Expr {
         Grouping(Expr expression) {
-            this.expression = expression;
+            this.expression = expression; type = "grouping";
         }
 
         @Override
@@ -44,7 +59,7 @@ abstract class Expr {
     }
     static class Literal extends Expr {
         Literal(Object value) {
-            this.value = value;
+            this.value = value;type = "literal";
         }
 
         @Override
@@ -58,6 +73,7 @@ abstract class Expr {
         Unary(Token operator, Expr right) {
             this.operator = operator;
             this.right = right;
+            type = "unary";
         }
 
         @Override
@@ -73,6 +89,7 @@ abstract class Expr {
             this.condition = condition;
             this.result = result;
             this.altResult = altResult;
+            type = "ternary";
         }
 
         @Override
@@ -86,6 +103,7 @@ abstract class Expr {
     static class Variable extends Expr {
         Variable(Token name) {
             this.name = name;
+            type = "variable";
         }
 
         @Override
@@ -100,6 +118,7 @@ abstract class Expr {
         Assign(Token name, Expr value) {
             this.name = name;
             this.value = value;
+            type = "assign";
         }
 
         @Override
@@ -116,6 +135,7 @@ abstract class Expr {
             this.left = left;
             this.operator = operator;
             this.right = right;
+            type = "logical";
         }
 
         @Override
@@ -133,6 +153,7 @@ abstract class Expr {
             this.callee = callee;
             this.paren = paren;
             this.arguments = arguments;
+            type = "call";
         }
 
         @Override
@@ -144,6 +165,20 @@ abstract class Expr {
         final Token paren;
         final List<Expr> arguments;
     }
+    /*
+    static class Lambda extends Expr implements LanguageCallable {
+        Lambda(List<Token> parameters, List<Stmt> body) {
+            this.parameters = parameters;
+            this.body = body;
+            type = "lambda";
+        }
+
+        @Override
+        <R> R accept(Visitor<R> visitor) {return visitor.visitLambdaExpr(this);}
+
+        final List<Token> parameters;
+        final List<Stmt> body;
+    } */
 
     abstract <R> R accept(Visitor <R> visitor);
 }
