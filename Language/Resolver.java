@@ -4,10 +4,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Stack;
+import java.util.Arrays;
 
 public class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void>{
     private final Interpreter interpreter;
-    private final Stack<Map<String, Boolean>> scopes = new Stack<>();
+    // Changed scopes from map of String to boolean to a map of String to int array of 3 size where
+    // array[0] = 0 (equivalent to false) or 1 (equivalent to true).
+    // array[1] = index within scope.
+    // array[2] = distance.
+    private final Stack<Map<String, int[]>> scopes = new Stack<>();
+    private final Stack<Map<String, Boolean>> visitations = new Stack<>();
     private FunctionType currentFunction = FunctionType.NONE;
 
     Resolver(Interpreter interpreter) {
@@ -16,11 +22,13 @@ public class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void>{
 
     private enum FunctionType {
         NONE,
+        BLOCK,
         FUNCTION
     }
 
     @Override
     public Void visitBlockStmt(Stmt.Block stmt) {
+        currentFunction = FunctionType.BLOCK;
         beginScope();
         resolve(stmt.statements);
         endScope();
@@ -78,6 +86,9 @@ public class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void>{
 
     @Override
     public Void visitBreakStmt(Stmt.Break stmt) {
+        if (currentFunction == FunctionType.NONE) {
+            Language.error(stmt.keyword, "Can't break outside of a loop.");
+        }
         return null;
     }
 
@@ -150,7 +161,8 @@ public class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void>{
 
     @Override
     public Void visitVariableExpr(Expr.Variable expr) {
-        if (!scopes.isEmpty() && scopes.peek().get(expr.name.lexeme) == Boolean.FALSE) {
+        if (scopes.isEmpty()) return null;
+        if (!scopes.peek().isEmpty() && scopes.peek().get(expr.name.lexeme)[0] == 0) {
             Language.error(expr.name, "Can't read local variable in its own initializer.");
         }
 
@@ -187,33 +199,43 @@ public class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void>{
     }
 
     private void beginScope() {
-        scopes.push(new HashMap<String, Boolean>());
+        scopes.push(new HashMap<String, int[]>());
+        visitations.push(new HashMap<String, Boolean>());
     }
 
     private void endScope() {
+        Map<String, Boolean> localScope = visitations.peek();
+        for (String variables : localScope.keySet()) {
+            if (localScope.get(variables) == Boolean.FALSE) System.err.println("Local variable " + variables +
+                        " is never used.");
+        }
+        visitations.pop();
         scopes.pop();
     }
 
     private void declare(Token name) {
         if (scopes.isEmpty()) return;
 
-        Map<String, Boolean> scope = scopes.peek();
+        Map<String, int[]> scope = scopes.peek();
         if (scope.containsKey(name.lexeme)) {
             Language.error(name, "Already a variable with this name in this scope.");
         }
-
-        scope.put(name.lexeme, false);
+        if (!visitations.isEmpty()) visitations.peek().put(name.lexeme, false);
+        scope.put(name.lexeme, new int[]{0, scope.size() - 1});
     }
 
     private void define(Token name) {
         if (scopes.isEmpty()) return;
-        scopes.peek().put(name.lexeme, true);
+        scopes.peek().put(name.lexeme, new int[]{1, scopes.peek().size() - 1});
     }
 
     private void resolveLocal(Expr expr, Token name) {
         for (int i = scopes.size() - 1; i >= 0; i--) {
             if (scopes.get(i).containsKey(name.lexeme)) {
-                interpreter.resolve(expr, scopes.size() - 1 - i);
+                visitations.get(i).put(name.lexeme, true);
+                interpreter.resolve(expr, scopes.size() - 1 - i, scopes.get(i).get(name.lexeme)[1]);
+                expr.setDistance(scopes.size() - 1 - i);
+                expr.setIndex(scopes.get(i).get(name.lexeme)[1]);
                 return;
             }
         }
