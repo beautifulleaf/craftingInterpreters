@@ -1,5 +1,5 @@
 # craftingInterpreters
-My implementation of Crafting Interpreters. Work in progress.
+Code from the book "Crafting Interpreters" with challenges implemented by me. 
 
 
 
