@@ -16,6 +16,7 @@ abstract class Expr {
         R visitGetExpr(Get expr);
         R visitSetExpr(Set expr);
         R visitThisExpr(This expr);
+        R visitSuperExpr(Super expr);
        // R visitLambdaExpr(Lambda expr);
     }
 
@@ -175,10 +176,8 @@ abstract class Expr {
             this.body = body;
             type = "lambda";
         }
-
         @Override
         <R> R accept(Visitor<R> visitor) {return visitor.visitLambdaExpr(this);}
-
         final List<Token> parameters;
         final List<Stmt> body;
     } */
@@ -187,6 +186,7 @@ abstract class Expr {
         Get(Expr object, Token name) {
             this.object = object;
             this.name = name;
+            type = "get";
         }
 
         @Override
@@ -203,6 +203,7 @@ abstract class Expr {
             this.object = object;
             this.name = name;
             this.value = value;
+            type = "set";
         }
 
         @Override
@@ -218,6 +219,7 @@ abstract class Expr {
     static class This extends Expr {
         This(Token keyword) {
             this.keyword = keyword;
+            type = "this";
         }
 
         @Override
@@ -226,6 +228,22 @@ abstract class Expr {
         }
 
         final Token keyword;
+    }
+
+    static class Super extends Expr {
+        Super(Token keyword, Token method) {
+            this.keyword = keyword;
+            this.method = method;
+            type = "super";
+        }
+
+        @Override
+        <R> R accept(Visitor<R> visitor) {
+            return visitor.visitSuperExpr(this);
+        }
+
+        final Token keyword;
+        final Token method;
     }
 
     abstract <R> R accept(Visitor <R> visitor);
