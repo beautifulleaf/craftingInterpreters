@@ -28,7 +28,6 @@ class Environment {
         throw new RuntimeError(name, "Undefined variable '" + name.lexeme + "'.");
     }
 
-
     void assign(Token name, Object value) {
         int i = 0;
         while (values[i][0] != null && i < 1000) {
@@ -72,6 +71,10 @@ class Environment {
 
     Object getAt(int distance, int index) {
         return ancestor(distance).values[index][1];
+    }
+
+    Object getAt(int distance, String name) {
+        return ancestor(distance).get(new Token(TokenType.STRING, name, "", 0));
     }
 
     void assignAt(int distance, int index, Token name, Object value) {
