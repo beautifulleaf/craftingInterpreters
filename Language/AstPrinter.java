@@ -59,6 +59,9 @@ class AstPrinter implements Expr.Visitor<String>{
 
     @Override
     public String visitThisExpr(Expr.This expr) {return expr.type;}
+
+    @Override
+    public String visitSuperExpr(Expr.Super expr) {return expr.type;}
     /*
     @Override
     public String visitLambdaExpr(Expr.Lambda expr) {return expr.parameters.toString() + ", " + expr.body.toString();}
