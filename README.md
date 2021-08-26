@@ -1,5 +1,5 @@
 # craftingInterpreters
-Code from the book "Crafting Interpreters" with challenges implemented by me in the Java implementation. 
+Code from the book "Crafting Interpreters" with challenges implemented by me in the Java implementation (under "Language"). 
 
 
-The C implementation is just the code from the book, but I may visit the challenges later on. 
+The CLox is just the code from the book, but I may do the challenges later on. 
